@@ -1,0 +1,292 @@
+--====================================================
+-- GT SIMPLE MENU | ALL-IN-ONE | RED STROKE ESP + AUTO-RESET
+--====================================================
+
+-- SERVICES
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local camera = workspace.CurrentCamera
+
+local player = Players.LocalPlayer
+local infJump, noclip, godMode, espEnabled = false,false,false,false
+
+--====================================================
+-- CHARACTER UTILS
+--====================================================
+local function getChar()
+	return player.Character or player.CharacterAdded:Wait()
+end
+
+--====================================================
+-- GUI
+--====================================================
+local gui = Instance.new("ScreenGui")
+gui.Name = "GTSimpleMenu"
+gui.ResetOnSpawn = false
+gui.Parent = player.PlayerGui
+
+-- MAIN FRAME
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.new(0,240,0,330)
+main.Position = UDim2.new(0.5,-120,0.5,-165)
+main.BackgroundColor3 = Color3.fromRGB(22,22,22)
+main.BorderSizePixel = 0
+main.Active = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
+local mainStroke = Instance.new("UIStroke", main)
+mainStroke.Thickness = 1.6
+mainStroke.Color = Color3.fromRGB(90,90,90)
+
+-- TITLE
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1,0,0,36)
+title.Text = "GT Simple Menu"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.new(1,1,1)
+title.BackgroundTransparency = 1
+
+-- CLOSE BUTTON
+local close = Instance.new("TextButton", title)
+close.Size = UDim2.new(0,28,0,28)
+close.Position = UDim2.new(1,-34,0,4)
+close.Text = "✕"
+close.Font = Enum.Font.GothamBold
+close.TextSize = 14
+close.TextColor3 = Color3.new(1,1,1)
+close.BackgroundColor3 = Color3.fromRGB(45,45,45)
+close.BorderSizePixel = 0
+Instance.new("UICorner", close).CornerRadius = UDim.new(1,0)
+Instance.new("UIStroke", close).Thickness = 1
+
+-- SCROLL FRAME
+local scroll = Instance.new("ScrollingFrame", main)
+scroll.Position = UDim2.new(0,10,0,42)
+scroll.Size = UDim2.new(1,-20,1,-52)
+scroll.ScrollBarThickness = 4
+scroll.CanvasSize = UDim2.new(0,0,0,0)
+scroll.BackgroundTransparency = 1
+local layout = Instance.new("UIListLayout", scroll)
+layout.Padding = UDim.new(0,8)
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+	scroll.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
+end)
+
+--====================================================
+-- DRAG FUNCTION
+--====================================================
+local function makeDraggable(frame, handle)
+	local dragging, dragStart, startPos
+	handle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+		end
+	end)
+	UIS.InputChanged:Connect(function(input)
+		if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+			local delta = input.Position - dragStart
+			frame.Position = startPos + UDim2.new(0,delta.X,0,delta.Y)
+		end
+	end)
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dragging = false
+		end
+	end)
+end
+
+makeDraggable(main, title)
+
+--====================================================
+-- OPEN ICON
+--====================================================
+local icon = Instance.new("TextButton", gui)
+icon.Size = UDim2.new(0,42,0,42)
+icon.Position = UDim2.new(0,20,0.5,-21)
+icon.Text = "GT"
+icon.Font = Enum.Font.GothamBold
+icon.TextSize = 14
+icon.TextColor3 = Color3.new(1,1,1)
+icon.BackgroundColor3 = Color3.fromRGB(30,30,30)
+icon.BorderSizePixel = 0
+icon.Visible = false
+Instance.new("UICorner", icon).CornerRadius = UDim.new(1,0)
+Instance.new("UIStroke", icon).Thickness = 1.6
+
+makeDraggable(icon, icon)
+
+close.MouseButton1Click:Connect(function()
+	main.Visible = false
+	icon.Visible = true
+end)
+
+icon.MouseButton1Click:Connect(function()
+	main.Visible = true
+	icon.Visible = false
+end)
+
+--====================================================
+-- BUTTON CREATOR
+--====================================================
+local function createButton(text)
+	local b = Instance.new("TextButton", scroll)
+	b.Size = UDim2.new(1,0,0,36)
+	b.Text = text
+	b.Font = Enum.Font.GothamBold
+	b.TextSize = 14
+	b.TextColor3 = Color3.new(1,1,1)
+	b.BackgroundColor3 = Color3.fromRGB(45,45,45)
+	b.BorderSizePixel = 0
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+	Instance.new("UIStroke", b).Thickness = 1
+	return b
+end
+
+--====================================================
+-- FEATURES
+--====================================================
+-- INFINITY JUMP
+UIS.JumpRequest:Connect(function()
+	if infJump then
+		getChar().Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+	end
+end)
+
+-- NOCLIP
+RunService.Stepped:Connect(function()
+	if noclip then
+		for _,p in pairs(getChar():GetDescendants()) do
+			if p:IsA("BasePart") then
+				p.CanCollide = false
+			end
+		end
+	end
+end)
+
+-- GOD MODE
+local godConn, ragConn
+local function enableGod()
+	local hum = getChar().Humanoid
+	hum.MaxHealth = math.huge
+	hum.Health = hum.MaxHealth
+
+	godConn = hum.HealthChanged:Connect(function()
+		hum.Health = hum.MaxHealth
+	end)
+
+	ragConn = hum.StateChanged:Connect(function(_,state)
+		if state == Enum.HumanoidStateType.Ragdoll
+		or state == Enum.HumanoidStateType.FallingDown
+		or state == Enum.HumanoidStateType.Physics then
+			hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+		end
+	end)
+end
+local function disableGod()
+	if godConn then godConn:Disconnect() end
+	if ragConn then ragConn:Disconnect() end
+end
+
+--====================================================
+-- ESP RED STROKE + NAME/HP | AUTO-RESET
+--====================================================
+local espFolder = Instance.new("Folder", gui)
+local espTable = {}
+
+local function createESP(plr)
+	if plr == player or espTable[plr] then return end
+
+	local char = plr.Character or plr.CharacterAdded:Wait()
+	local highlight = Instance.new("Highlight")
+	highlight.Parent = espFolder
+	highlight.Adornee = char
+	highlight.FillTransparency = 1
+	highlight.OutlineColor = Color3.fromRGB(255,0,0)
+	highlight.OutlineTransparency = 0
+
+	local hrp = char:WaitForChild("HumanoidRootPart")
+	local bill = Instance.new("BillboardGui")
+	bill.Parent = espFolder
+	bill.Adornee = hrp
+	bill.Size = UDim2.new(0,100,0,40)
+	bill.StudsOffset = Vector3.new(0,3,0)
+	bill.AlwaysOnTop = true
+
+	local label = Instance.new("TextLabel", bill)
+	label.Size = UDim2.new(1,0,1,0)
+	label.BackgroundTransparency = 1
+	label.TextColor3 = Color3.new(1,1,1)
+	label.TextStrokeTransparency = 0.5
+	label.Font = Enum.Font.GothamBold
+	label.TextSize = 14
+
+	espTable[plr] = {highlight = highlight, label = label}
+
+	RunService.RenderStepped:Connect(function()
+		if not espEnabled or not plr.Character or not plr.Character:FindFirstChild("Humanoid") then
+			label.Text = ""
+			highlight.Enabled = false
+			return
+		end
+		highlight.Enabled = true
+		local hum = plr.Character.Humanoid
+		label.Text = plr.Name.." | "..math.floor(hum.Health)
+	end)
+end
+
+-- initial ESP
+for _,p in pairs(Players:GetPlayers()) do createESP(p) end
+
+-- Auto-update ESP alle 5 Sekunden
+spawn(function()
+	while true do
+		for _,p in pairs(Players:GetPlayers()) do
+			createESP(p)
+		end
+		wait(5)
+	end
+end)
+
+-- Event für sofortige Erstellung beim Join
+Players.PlayerAdded:Connect(function(plr)
+	createESP(plr)
+end)
+
+--====================================================
+-- BUTTONS
+--====================================================
+local b1 = createButton("Infinity Jump: OFF")
+b1.MouseButton1Click:Connect(function()
+	infJump = not infJump
+	b1.Text = "Infinity Jump: "..(infJump and "ON" or "OFF")
+end)
+
+local b2 = createButton("NoClip: OFF")
+b2.MouseButton1Click:Connect(function()
+	noclip = not noclip
+	b2.Text = "NoClip: "..(noclip and "ON" or "OFF")
+end)
+
+local b3 = createButton("God Mode: OFF")
+b3.MouseButton1Click:Connect(function()
+	godMode = not godMode
+	b3.Text = "God Mode: "..(godMode and "ON" or "OFF")
+	if godMode then enableGod() else disableGod() end
+end)
+
+local b4 = createButton("ESP: OFF")
+b4.MouseButton1Click:Connect(function()
+	espEnabled = not espEnabled
+	b4.Text = "ESP: "..(espEnabled and "ON" or "OFF")
+end)
+
+local b5 = createButton("Give All Tools")
+b5.MouseButton1Click:Connect(function()
+	for _,t in pairs(ReplicatedStorage:GetChildren()) do
+		if t:IsA("Tool") then t:Clone().Parent = player.Backpack end
+	end
+end)
